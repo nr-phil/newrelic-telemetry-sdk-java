@@ -48,6 +48,7 @@ public class TelemetryClient {
   private final int shutdownSeconds;
   private final LogBatchSender logBatchSender;
   private NotificationHandler notificationHandler = new LoggingNotificationHandler(LOG);
+  private Backoff backoff = Backoff.defaultBackoff();
 
   /**
    * Create a new TelemetryClient instance, with four senders. Note that if you don't intend to send
@@ -133,6 +134,19 @@ public class TelemetryClient {
   }
 
   /**
+   * Configures the backoff strategy for retrying failed batches of telemetry. This method should be
+   * called before sending any batches to ensure the desired backoff strategy is applied to all
+   * subsequent retries. If not set, the default backoff strategy will be used (see {@link
+   * Backoff#defaultBackoff()}). This method is not thread-safe and should be configured during
+   * initialization.
+   *
+   * @param backoff the backoff strategy to use for retrying failed batches.
+   */
+  public void configureBackoff(Backoff backoff) {
+    this.backoff = backoff;
+  }
+
+  /**
    * Send a batch of {@link com.newrelic.telemetry.metrics.Metric} instances, with standard retry
    * logic. This happens on a background thread, asynchronously, so currently there will be no
    * feedback to the caller outside of the logs.
@@ -183,7 +197,7 @@ public class TelemetryClient {
       TelemetryBatch<? extends Telemetry> batch,
       long waitTime,
       TimeUnit timeUnit) {
-    scheduleBatchSend(sender, batch, waitTime, timeUnit, Backoff.defaultBackoff());
+    scheduleBatchSend(sender, batch, waitTime, timeUnit, backoff);
   }
 
   private void scheduleBatchSend(
