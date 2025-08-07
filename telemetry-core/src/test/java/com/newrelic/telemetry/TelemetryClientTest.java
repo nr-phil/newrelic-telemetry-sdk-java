@@ -335,6 +335,40 @@ class TelemetryClientTest {
     assertTrue(sentUserAgent.contains("TelemetrySDK"));
   }
 
+  @Test
+  void configureBackoff_usesCustomBackoffRetryCount() throws Exception {
+    // Test with 2 retries: sendBatch always throws, backoff stops after 2 retries
+    Backoff customBackoff2 = mock(Backoff.class);
+    when(customBackoff2.nextWaitMs()).thenReturn(1L, 1L, -1L);
+    // Always throw RetryWithBackoffException
+    when(batchSender.sendBatch(metricBatch)).thenThrow(new RetryWithBackoffException());
+
+    TelemetryClient testClass2 = new TelemetryClient(batchSender, null, null, null);
+    testClass2.configureBackoff(customBackoff2);
+    testClass2.sendBatch(metricBatch);
+    Thread.sleep(200); // Wait for async retries
+    // Should call nextWaitMs() exactly 3 times (2 retries, then stop)
+    org.mockito.Mockito.verify(customBackoff2, org.mockito.Mockito.times(3)).nextWaitMs();
+    // Should call sendBatch 3 times (initial + 2 retries)
+    org.mockito.Mockito.verify(batchSender, org.mockito.Mockito.times(3)).sendBatch(metricBatch);
+
+    // Reset mocks for next test
+    org.mockito.Mockito.reset(batchSender);
+    // Test with 3 retries: sendBatch always throws, backoff stops after 3 retries
+    Backoff customBackoff3 = mock(Backoff.class);
+    when(customBackoff3.nextWaitMs()).thenReturn(1L, 1L, 1L, -1L);
+    when(batchSender.sendBatch(metricBatch)).thenThrow(new RetryWithBackoffException());
+
+    TelemetryClient testClass3 = new TelemetryClient(batchSender, null, null, null);
+    testClass3.configureBackoff(customBackoff3);
+    testClass3.sendBatch(metricBatch);
+    Thread.sleep(300); // Wait for async retries
+    // Should call nextWaitMs() exactly 4 times (3 retries, then stop)
+    org.mockito.Mockito.verify(customBackoff3, org.mockito.Mockito.times(4)).nextWaitMs();
+    // Should call sendBatch 4 times (initial + 3 retries)
+    org.mockito.Mockito.verify(batchSender, org.mockito.Mockito.times(4)).sendBatch(metricBatch);
+  }
+
   private Answer<Object> countDown(CountDownLatch latch) {
     return invocation -> {
       latch.countDown();
