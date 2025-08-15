@@ -40,8 +40,8 @@ public class TelemetryClient {
   private static final int DEFAULT_SHUTDOWN_SECONDS = 3;
   private static final boolean DEFAULT_IS_DAEMON = true;
   private static final int DEFAULT_MAX_TELEMETRY_LIMIT = 1_000_000;
-  private static final int DEFAULT_FLUSH_THRESHOLD_PERCENT = 0; // disabled by default
-  private static final long DEFAULT_FLUSH_INTERVAL_MS = 0; // disabled by default
+  private static final int DEFAULT_FLUSH_THRESHOLD_PERCENT = 0;
+  private static final long DEFAULT_FLUSH_INTERVAL_MS = 0;
 
   private final EventBatchSender eventBatchSender;
   private final MetricBatchSender metricBatchSender;
